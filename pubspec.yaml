@@ -1,0 +1,20 @@
+name: dbus_navigator
+description: A tool to browse and interact with objects on the D-Bus message bus
+
+publish_to: 'none'
+version: 0.0.0-dev.1
+
+environment:
+  sdk: ">=2.7.0 <3.0.0"
+
+dependencies:
+  flutter:
+    sdk: flutter
+  dbus: ^0.0.0-dev.22
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+
+flutter:
+  uses-material-design: true
