@@ -18,20 +18,34 @@ class DbusNavigator extends StatelessWidget {
   }
 }
 
-class BusView extends StatelessWidget {
+class BusView extends StatefulWidget {
   final DBusClient client;
 
   const BusView(this.client);
+
+  @override
+  _BusViewState createState() => _BusViewState();
+}
+
+class _BusViewState extends State<BusView> {
+  String _selectedName;
+
+  set selectedName(String value) {
+    setState(() {
+      _selectedName = value;
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
         body: Row(
       children: <Widget>[
-        BusNameList(client, nameSelected: (name) {
-          print(name);
+        // FIXME: We don't want to regenerate this every time a name is selected
+        BusNameList(widget.client, nameSelected: (name) {
+          selectedName = name;
         }),
-        Text('FIXME'),
+        BusObjectBrowser(widget.client, _selectedName),
       ],
     ));
   }
@@ -41,7 +55,8 @@ class BusNameList extends StatelessWidget {
   final DBusClient client;
   final void Function(String) nameSelected;
 
-  const BusNameList(this.client, {this.nameSelected});
+  const BusNameList(this.client, {this.nameSelected, Key key})
+      : super(key: key);
 
   @override
   Widget build(BuildContext context) {
@@ -67,5 +82,17 @@ class BusNameList extends StatelessWidget {
           return Column(
               crossAxisAlignment: CrossAxisAlignment.start, children: children);
         });
+  }
+}
+
+class BusObjectBrowser extends StatelessWidget {
+  final DBusClient client;
+  final String name;
+
+  BusObjectBrowser(this.client, this.name, {Key key}) : super(key: key);
+
+  @override
+  Widget build(BuildContext context) {
+    return Text('$name');
   }
 }
