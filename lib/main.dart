@@ -13,44 +13,59 @@ class DbusNavigator extends StatelessWidget {
       theme: ThemeData(
         primarySwatch: Colors.blue,
       ),
-      home: MyHomePage(title: 'D-Bus Navigator'),
+      home: BusView(DBusClient.system()),
     );
   }
 }
 
-class MyHomePage extends StatefulWidget {
-  final systemClient = DBusClient.system();
+class BusView extends StatelessWidget {
+  final DBusClient client;
 
-  MyHomePage({Key key, this.title}) : super(key: key);
+  const BusView(this.client);
 
-  final String title;
-
-  @override
-  _MyHomePageState createState() => _MyHomePageState();
-}
-
-class _MyHomePageState extends State<MyHomePage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-        body: FutureBuilder<List<String>>(
-            future: widget.systemClient.listNames(),
-            builder: (context, snapshot) {
-              var children = <Widget>[];
-              if (snapshot.hasData) {
-                var names = snapshot.data;
-                names.sort();
-                for (var name in names) {
-                  if (name.startsWith(':')) {
-                    continue;
-                  }
-                  children.add(FlatButton(
-                      onPressed: () {},
-                      child: Align(
-                          alignment: Alignment.centerLeft, child: Text(name))));
-                }
+        body: Row(
+      children: <Widget>[
+        BusNameList(client, nameSelected: (name) {
+          print(name);
+        }),
+        Text('FIXME'),
+      ],
+    ));
+  }
+}
+
+class BusNameList extends StatelessWidget {
+  final DBusClient client;
+  final void Function(String) nameSelected;
+
+  const BusNameList(this.client, {this.nameSelected});
+
+  @override
+  Widget build(BuildContext context) {
+    return FutureBuilder<List<String>>(
+        future: client.listNames(),
+        builder: (context, snapshot) {
+          var children = <Widget>[];
+          if (snapshot.hasData) {
+            var names = snapshot.data;
+            names.sort();
+            for (var name in names) {
+              if (name.startsWith(':')) {
+                continue;
               }
-              return Column(children: children);
-            }));
+              children.add(FlatButton(
+                onPressed: () {
+                  nameSelected(name);
+                },
+                child: Text(name),
+              ));
+            }
+          }
+          return Column(
+              crossAxisAlignment: CrossAxisAlignment.start, children: children);
+        });
   }
 }
