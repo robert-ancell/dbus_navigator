@@ -86,6 +86,13 @@ class BusNameList extends StatelessWidget {
   }
 }
 
+bool isStandardInterface(String name) {
+  return name == 'org.freedesktop.DBus.Introspectable' ||
+      name == 'org.freedesktop.DBus.ObjectManager' ||
+      name == 'org.freedesktop.DBus.Peer' ||
+      name == 'org.freedesktop.DBus.Properties';
+}
+
 Future<Map<String, List<DBusIntrospectInterface>>> _introspectObjects(
     DBusClient client, String name, DBusObjectPath path) async {
   var names = <String, List<DBusIntrospectInterface>>{};
@@ -102,7 +109,7 @@ Future<Map<String, List<DBusIntrospectInterface>>> _introspectObjects(
     names.addAll(children);
   }
 
-  if (node.interfaces.isNotEmpty) {
+  if (node.interfaces.where((i) => !isStandardInterface(i.name)).isNotEmpty) {
     names[path.value] = node.interfaces;
   }
 
@@ -148,10 +155,11 @@ class BusObjectView extends StatelessWidget {
         children: <Widget>[
           Text(name),
           Padding(
-            padding: EdgeInsets.only(left: 40),
+            padding: EdgeInsets.only(left: 20),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: interfaces
+                  .where((i) => !isStandardInterface(i.name))
                   .map((interface) => BusInterfaceView(interface))
                   .toList(),
             ),
@@ -167,6 +175,51 @@ class BusInterfaceView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Text(interface.name);
+    return Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: <Widget>[
+          Text(interface.name),
+          Padding(
+            padding: EdgeInsets.only(left: 20),
+            child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: <Widget>[
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: interface.properties
+                        .map((property) => BusPropertyView(property))
+                        .toList(),
+                  ),
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: interface.methods
+                        .map((method) => BusMethodView(method))
+                        .toList(),
+                  ),
+                ]),
+          ),
+        ]);
+  }
+}
+
+class BusPropertyView extends StatelessWidget {
+  final DBusIntrospectProperty property;
+
+  BusPropertyView(this.property);
+
+  @override
+  Widget build(BuildContext context) {
+    return Text(property.name);
+  }
+}
+
+class BusMethodView extends StatelessWidget {
+  final DBusIntrospectMethod method;
+
+  BusMethodView(this.method);
+
+  @override
+  Widget build(BuildContext context) {
+    return Text('${method.name}()');
   }
 }
