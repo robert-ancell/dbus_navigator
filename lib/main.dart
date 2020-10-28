@@ -85,6 +85,29 @@ class BusNameList extends StatelessWidget {
   }
 }
 
+Future<List<String>> _introspectObjects(
+    DBusClient client, String name, DBusObjectPath path) async {
+  var names = <String>[];
+
+  var node = await DBusRemoteObject(client, name, path).introspect();
+  for (var child in node.children) {
+    var newPath = path.value;
+    if (newPath != '/') {
+      newPath += '/';
+    }
+    newPath += child.name;
+    var childNames =
+        await _introspectObjects(client, name, DBusObjectPath(newPath));
+    names.addAll(childNames);
+  }
+
+  if (node.interfaces.isNotEmpty) {
+    names.add(path.value);
+  }
+
+  return names;
+}
+
 class BusObjectBrowser extends StatelessWidget {
   final DBusClient client;
   final String name;
@@ -93,6 +116,17 @@ class BusObjectBrowser extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Text('$name');
+    return FutureBuilder<List<String>>(
+        future: _introspectObjects(client, name, DBusObjectPath('/')),
+        builder: (context, snapshot) {
+          var children = <Widget>[];
+          if (snapshot.hasData) {
+            var names = snapshot.data;
+            names.sort();
+            children.addAll(names.map((name) => Text(name)));
+          }
+          return Column(
+              crossAxisAlignment: CrossAxisAlignment.start, children: children);
+        });
   }
 }
