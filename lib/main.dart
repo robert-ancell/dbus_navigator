@@ -86,9 +86,9 @@ class BusNameList extends StatelessWidget {
   }
 }
 
-Future<List<String>> _introspectObjects(
+Future<Map<String, List<DBusIntrospectInterface>>> _introspectObjects(
     DBusClient client, String name, DBusObjectPath path) async {
-  var names = <String>[];
+  var names = <String, List<DBusIntrospectInterface>>{};
 
   var node = await DBusRemoteObject(client, name, path).introspect();
   for (var child in node.children) {
@@ -97,13 +97,13 @@ Future<List<String>> _introspectObjects(
       newPath += '/';
     }
     newPath += child.name;
-    var childNames =
+    var children =
         await _introspectObjects(client, name, DBusObjectPath(newPath));
-    names.addAll(childNames);
+    names.addAll(children);
   }
 
   if (node.interfaces.isNotEmpty) {
-    names.add(path.value);
+    names[path.value] = node.interfaces;
   }
 
   return names;
@@ -117,17 +117,56 @@ class BusObjectBrowser extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return FutureBuilder<List<String>>(
+    return FutureBuilder<Map<String, List<DBusIntrospectInterface>>>(
         future: _introspectObjects(client, name, DBusObjectPath('/')),
         builder: (context, snapshot) {
           var children = <Widget>[];
           if (snapshot.hasData) {
-            var names = snapshot.data;
+            var objects = snapshot.data;
+            var names = objects.keys.toList();
             names.sort();
-            children.addAll(names.map((name) => Text(name)));
+            for (var name in names) {
+              children.add(BusObjectView(name, objects[name]));
+            }
           }
           return Column(
               crossAxisAlignment: CrossAxisAlignment.start, children: children);
         });
+  }
+}
+
+class BusObjectView extends StatelessWidget {
+  final String name;
+  final List<DBusIntrospectInterface> interfaces;
+
+  BusObjectView(this.name, this.interfaces);
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: <Widget>[
+          Text(name),
+          Padding(
+            padding: EdgeInsets.only(left: 40),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: interfaces
+                  .map((interface) => BusInterfaceView(interface))
+                  .toList(),
+            ),
+          ),
+        ]);
+  }
+}
+
+class BusInterfaceView extends StatelessWidget {
+  final DBusIntrospectInterface interface;
+
+  BusInterfaceView(this.interface);
+
+  @override
+  Widget build(BuildContext context) {
+    return Text(interface.name);
   }
 }
