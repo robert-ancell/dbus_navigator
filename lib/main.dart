@@ -21,14 +21,17 @@ class DbusNavigator extends StatelessWidget {
 class BusView extends StatefulWidget {
   final DBusClient client;
 
-  const BusView(this.client);
+  BusView(this.client);
 
   @override
-  _BusViewState createState() => _BusViewState();
+  _BusViewState createState() => _BusViewState(client.listNames());
 }
 
 class _BusViewState extends State<BusView> {
   String _selectedName;
+  Future<List<String>> names;
+
+  _BusViewState(this.names);
 
   set selectedName(String value) {
     setState(() {
@@ -41,8 +44,7 @@ class _BusViewState extends State<BusView> {
     return Scaffold(
         body: Row(
       children: <Widget>[
-        // FIXME: We don't want to regenerate this every time a name is selected
-        BusNameList(widget.client, nameSelected: (name) {
+        BusNameList(names, nameSelected: (name) {
           selectedName = name;
         }),
         BusObjectBrowser(widget.client, _selectedName),
@@ -52,16 +54,15 @@ class _BusViewState extends State<BusView> {
 }
 
 class BusNameList extends StatelessWidget {
-  final DBusClient client;
+  final Future<List<String>> names;
   final void Function(String) nameSelected;
 
-  const BusNameList(this.client, {this.nameSelected, Key key})
-      : super(key: key);
+  const BusNameList(this.names, {this.nameSelected, Key key}) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
     return FutureBuilder<List<String>>(
-        future: client.listNames(),
+        future: names,
         builder: (context, snapshot) {
           var children = <Widget>[];
           if (snapshot.hasData) {
