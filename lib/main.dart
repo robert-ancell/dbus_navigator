@@ -45,26 +45,31 @@ class _BusViewState extends State<BusView> {
   Widget build(BuildContext context) {
     return Row(
       children: <Widget>[
-        Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: <Widget>[
-            Text('System Bus', style: Theme.of(context).textTheme.headline5),
-            BusNameList(systemNames, nameSelected: (name) {
-              setState(() {
-                selectedClient = systemClient;
-                selectedName = name;
-              });
-            }),
-            Text('Session Bus', style: Theme.of(context).textTheme.headline5),
-            BusNameList(sessionNames, nameSelected: (name) {
-              setState(() {
-                selectedClient = sessionClient;
-                selectedName = name;
-              });
-            }),
-          ],
+        Flexible(
+          child: ListView(
+            children: <Widget>[
+              Text('System Bus', style: Theme.of(context).textTheme.headline5),
+              BusNameList(systemNames, nameSelected: (name) {
+                setState(() {
+                  selectedClient = systemClient;
+                  selectedName = name;
+                });
+              }),
+              Text('Session Bus', style: Theme.of(context).textTheme.headline5),
+              BusNameList(sessionNames, nameSelected: (name) {
+                setState(() {
+                  selectedClient = sessionClient;
+                  selectedName = name;
+                });
+              }),
+            ],
+          ),
         ),
-        BusObjectBrowser(selectedClient, selectedName),
+        Expanded(
+          child: ListView(children: <Widget>[
+            BusObjectBrowser(selectedClient, selectedName),
+          ]),
+        ),
       ],
     );
   }
