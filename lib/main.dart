@@ -13,30 +13,32 @@ class DbusNavigator extends StatelessWidget {
       theme: ThemeData(
         primarySwatch: Colors.blue,
       ),
-      home: BusView(DBusClient.system()),
+      home: BusView(DBusClient.system(), DBusClient.session()),
     );
   }
 }
 
 class BusView extends StatefulWidget {
-  final DBusClient client;
+  final DBusClient systemClient;
+  final DBusClient sessionClient;
 
-  BusView(this.client);
+  BusView(this.systemClient, this.sessionClient);
 
   @override
-  _BusViewState createState() => _BusViewState(client.listNames());
+  _BusViewState createState() => _BusViewState(systemClient, sessionClient);
 }
 
 class _BusViewState extends State<BusView> {
-  String _selectedName;
-  Future<List<String>> names;
+  final DBusClient systemClient;
+  final DBusClient sessionClient;
+  Future<List<String>> systemNames;
+  Future<List<String>> sessionNames;
+  DBusClient selectedClient;
+  String selectedName;
 
-  _BusViewState(this.names);
-
-  set selectedName(String value) {
-    setState(() {
-      _selectedName = value;
-    });
+  _BusViewState(this.systemClient, this.sessionClient) {
+    systemNames = systemClient.listNames();
+    sessionNames = sessionClient.listNames();
   }
 
   @override
@@ -44,10 +46,26 @@ class _BusViewState extends State<BusView> {
     return Scaffold(
         body: Row(
       children: <Widget>[
-        BusNameList(names, nameSelected: (name) {
-          selectedName = name;
-        }),
-        BusObjectBrowser(widget.client, _selectedName),
+        Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: <Widget>[
+            Text('System Bus', style: Theme.of(context).textTheme.headline5),
+            BusNameList(systemNames, nameSelected: (name) {
+              setState(() {
+                selectedClient = systemClient;
+                selectedName = name;
+              });
+            }),
+            Text('Session Bus', style: Theme.of(context).textTheme.headline5),
+            BusNameList(sessionNames, nameSelected: (name) {
+              setState(() {
+                selectedClient = sessionClient;
+                selectedName = name;
+              });
+            }),
+          ],
+        ),
+        BusObjectBrowser(selectedClient, selectedName),
       ],
     ));
   }
