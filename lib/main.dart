@@ -220,6 +220,23 @@ class BusMethodView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Text('${method.name}()');
+    var inputArgs = <String>[];
+    var outputArgs = <String>[];
+    var index = 0;
+    for (var arg in method.args) {
+      var argName = arg.name;
+      argName ??= 'arg_$index';
+      if (arg.direction == DBusArgumentDirection.in_) {
+        inputArgs.add(argName);
+      } else {
+        outputArgs.add(argName);
+      }
+      index++;
+    }
+    var text = '${method.name}(${inputArgs.join(', ')})';
+    if (outputArgs.isNotEmpty) {
+      text += ' → ${outputArgs.join(', ')}';
+    }
+    return Text(text);
   }
 }
