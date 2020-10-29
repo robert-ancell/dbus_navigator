@@ -9,12 +9,12 @@ class DbusNavigator extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'D-Bus Navigator',
-      theme: ThemeData(
-        primarySwatch: Colors.blue,
-      ),
-      home: BusView(DBusClient.system(), DBusClient.session()),
-    );
+        title: 'D-Bus Navigator',
+        theme: ThemeData(
+          primarySwatch: Colors.blue,
+        ),
+        home:
+            Scaffold(body: BusView(DBusClient.system(), DBusClient.session())));
   }
 }
 
@@ -43,8 +43,7 @@ class _BusViewState extends State<BusView> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-        body: Row(
+    return Row(
       children: <Widget>[
         Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -67,7 +66,7 @@ class _BusViewState extends State<BusView> {
         ),
         BusObjectBrowser(selectedClient, selectedName),
       ],
-    ));
+    );
   }
 }
 
