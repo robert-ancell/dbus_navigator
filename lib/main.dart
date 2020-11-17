@@ -115,9 +115,9 @@ bool isStandardInterface(String name) {
       name == 'org.freedesktop.DBus.Properties';
 }
 
-Future<Map<String, List<DBusIntrospectInterface>>> _introspectObjects(
+Future<Map<DBusObjectPath, List<DBusIntrospectInterface>>> _introspectObjects(
     DBusClient client, String name, DBusObjectPath path) async {
-  var names = <String, List<DBusIntrospectInterface>>{};
+  var paths = <DBusObjectPath, List<DBusIntrospectInterface>>{};
 
   var node = await DBusRemoteObject(client, name, path).introspect();
   for (var child in node.children) {
@@ -128,14 +128,14 @@ Future<Map<String, List<DBusIntrospectInterface>>> _introspectObjects(
     newPath += child.name;
     var children =
         await _introspectObjects(client, name, DBusObjectPath(newPath));
-    names.addAll(children);
+    paths.addAll(children);
   }
 
   if (node.interfaces.where((i) => !isStandardInterface(i.name)).isNotEmpty) {
-    names[path.value] = node.interfaces;
+    paths[path] = node.interfaces;
   }
 
-  return names;
+  return paths;
 }
 
 class BusObjectBrowser extends StatelessWidget {
@@ -146,16 +146,16 @@ class BusObjectBrowser extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return FutureBuilder<Map<String, List<DBusIntrospectInterface>>>(
+    return FutureBuilder<Map<DBusObjectPath, List<DBusIntrospectInterface>>>(
         future: _introspectObjects(client, name, DBusObjectPath('/')),
         builder: (context, snapshot) {
           var children = <Widget>[];
           if (snapshot.hasData) {
             var objects = snapshot.data;
-            var names = objects.keys.toList();
-            names.sort();
-            for (var name in names) {
-              children.add(BusObjectView(name, objects[name]));
+            var paths = objects.keys.toList();
+            paths.sort((a, b) => a.value.compareTo(b.value));
+            for (var path in paths) {
+              children.add(BusObjectView(client, name, path, objects[path]));
             }
           }
           return Column(
@@ -165,24 +165,27 @@ class BusObjectBrowser extends StatelessWidget {
 }
 
 class BusObjectView extends StatelessWidget {
+  final DBusClient client;
   final String name;
+  final DBusObjectPath path;
   final List<DBusIntrospectInterface> interfaces;
 
-  BusObjectView(this.name, this.interfaces);
+  BusObjectView(this.client, this.name, this.path, this.interfaces);
 
   @override
   Widget build(BuildContext context) {
+    var object = DBusRemoteObject(client, name, path);
     return Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: <Widget>[
-          Text(name),
+          Text(path.value),
           Padding(
             padding: EdgeInsets.only(left: 20),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: interfaces
                   .where((i) => !isStandardInterface(i.name))
-                  .map((interface) => BusInterfaceView(interface))
+                  .map((interface) => BusInterfaceView(object, interface))
                   .toList(),
             ),
           ),
@@ -190,17 +193,38 @@ class BusObjectView extends StatelessWidget {
   }
 }
 
-class BusInterfaceView extends StatelessWidget {
+class BusInterfaceView extends StatefulWidget {
+  final DBusRemoteObject object;
   final DBusIntrospectInterface interface;
 
-  BusInterfaceView(this.interface);
+  BusInterfaceView(this.object, this.interface);
+
+  @override
+  _BusInterfaceViewState createState() =>
+      _BusInterfaceViewState(object, interface);
+}
+
+class _BusInterfaceViewState extends State<BusInterfaceView> {
+  final properties = <String, DBusValue>{};
+
+  _BusInterfaceViewState(
+      DBusRemoteObject object, DBusIntrospectInterface interface) {
+    // Get the value of each property.
+    object
+        .getAllProperties(interface.name)
+        .then((properties) => _updateProperties(properties));
+  }
+
+  void _updateProperties(Map<String, DBusValue> properties_) {
+    setState(() => {properties.addAll(properties_)});
+  }
 
   @override
   Widget build(BuildContext context) {
     return Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: <Widget>[
-          Text(interface.name),
+          Text(widget.interface.name),
           Padding(
             padding: EdgeInsets.only(left: 20),
             child: Column(
@@ -208,13 +232,14 @@ class BusInterfaceView extends StatelessWidget {
                 children: <Widget>[
                   Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
-                    children: interface.properties
-                        .map((property) => BusPropertyView(property))
+                    children: widget.interface.properties
+                        .map((property) => BusPropertyView(
+                            property, properties[property.name]))
                         .toList(),
                   ),
                   Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
-                    children: interface.methods
+                    children: widget.interface.methods
                         .map((method) => BusMethodView(method))
                         .toList(),
                   ),
@@ -226,12 +251,17 @@ class BusInterfaceView extends StatelessWidget {
 
 class BusPropertyView extends StatelessWidget {
   final DBusIntrospectProperty property;
+  final DBusValue value;
 
-  BusPropertyView(this.property);
+  BusPropertyView(this.property, this.value);
 
   @override
   Widget build(BuildContext context) {
-    return Text(property.name);
+    if (value != null) {
+      return Text('${property.name} = $value');
+    } else {
+      return Text(property.name);
+    }
   }
 }
 
