@@ -205,14 +205,24 @@ class BusInterfaceView extends StatefulWidget {
 }
 
 class _BusInterfaceViewState extends State<BusInterfaceView> {
+  final DBusRemoteObject object;
+  final DBusIntrospectInterface interface;
   final properties = <String, DBusValue>{};
 
-  _BusInterfaceViewState(
-      DBusRemoteObject object, DBusIntrospectInterface interface) {
-    // Get the value of each property.
+  _BusInterfaceViewState(this.object, this.interface) {
+    _readAllProperties();
+  }
+
+  void _readAllProperties() {
     object
         .getAllProperties(interface.name)
         .then((properties) => _updateProperties(properties));
+  }
+
+  void _readProperty(String name) {
+    object
+        .getProperty(interface.name, name)
+        .then((value) => _updateProperties(<String, DBusValue>{name: value}));
   }
 
   void _updateProperties(Map<String, DBusValue> newProperties) {
@@ -234,7 +244,9 @@ class _BusInterfaceViewState extends State<BusInterfaceView> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: widget.interface.properties
                         .map((property) => BusPropertyView(
-                            property, properties[property.name]))
+                            property, properties[property.name],
+                            readClicked: () => _readProperty(property.name),
+                            writeClicked: () => print('write')))
                         .toList(),
                   ),
                   Column(
@@ -252,16 +264,36 @@ class _BusInterfaceViewState extends State<BusInterfaceView> {
 class BusPropertyView extends StatelessWidget {
   final DBusIntrospectProperty property;
   final DBusValue value;
+  final void Function() readClicked;
+  final void Function() writeClicked;
 
-  BusPropertyView(this.property, this.value);
+  BusPropertyView(this.property, this.value,
+      {this.readClicked, this.writeClicked});
 
   @override
   Widget build(BuildContext context) {
+    String label;
     if (value != null) {
-      return Text('${property.name} = ${value.toNative()}');
+      label = '${property.name} = ${value.toNative()}';
     } else {
-      return Text(property.name);
+      label = property.name;
     }
+    var children = <Widget>[Expanded(child: Text(label))];
+    if (property.access != DBusPropertyAccess.read) {
+      children.add(FlatButton(
+        onPressed: () => writeClicked(),
+        child: Icon(Icons.edit),
+      ));
+    }
+    if (property.access != DBusPropertyAccess.write) {
+      children.add(FlatButton(
+        onPressed: () => readClicked(),
+        child: Icon(Icons.refresh),
+      ));
+    }
+    return Row(
+      children: children,
+    );
   }
 }
 
