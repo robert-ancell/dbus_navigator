@@ -215,8 +215,8 @@ class _BusInterfaceViewState extends State<BusInterfaceView> {
         .then((properties) => _updateProperties(properties));
   }
 
-  void _updateProperties(Map<String, DBusValue> properties_) {
-    setState(() => {properties.addAll(properties_)});
+  void _updateProperties(Map<String, DBusValue> newProperties) {
+    setState(() => {properties.addAll(newProperties)});
   }
 
   @override
@@ -258,7 +258,7 @@ class BusPropertyView extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (value != null) {
-      return Text('${property.name} = $value');
+      return Text('${property.name} = ${value.toNative()}');
     } else {
       return Text(property.name);
     }
